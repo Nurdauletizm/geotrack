@@ -1,0 +1,7 @@
+{
+  "name": "GeoTracker AI",
+  "description": "Real-time GPS tracking application with path visualization and AI location analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
