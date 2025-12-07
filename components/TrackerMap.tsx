@@ -23,13 +23,22 @@ const MapController: React.FC<{ center: Coordinates | null, isAdmin: boolean }> 
   const map = useMap();
   const firstRender = useRef(true);
 
+  // Исправляет проблему "серой карты" или неполной загрузки плиток
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map]);
+
   useEffect(() => {
     if (center && !isAdmin) {
       if (firstRender.current) {
-        map.setView([center.lat, center.lng], 16);
+        map.setView([center.lat, center.lng], 16, { animate: false });
         firstRender.current = false;
       } else {
-        map.panTo([center.lat, center.lng]);
+        // Плавное слежение за пользователем
+        map.panTo([center.lat, center.lng], { animate: true, duration: 1.0 });
       }
     }
   }, [center, map, isAdmin]);
@@ -52,6 +61,7 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ currentUser, otherUsers, isAdmi
       zoom={14} 
       zoomControl={false} 
       className="h-full w-full outline-none"
+      scrollWheelZoom={true}
     >
       <TileLayer
         attribution='&copy; OpenStreetMap'
@@ -81,19 +91,21 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ currentUser, otherUsers, isAdmi
             icon={createIcon(user.color, user.isCurrentUser)}
           >
              <Popup>
-                <div className="text-slate-900">
-                  <strong>{user.name}</strong><br/>
-                  Speed: {(user.position.speed || 0 * 3.6).toFixed(1)} km/h<br/>
-                  {user.isCurrentUser ? '(Это вы)' : '(Отслеживается)'}
+                <div className="text-slate-900 text-sm">
+                  <strong className="block mb-1">{user.name}</strong>
+                  <div className="text-xs text-slate-600">
+                    Speed: {((user.position.speed || 0) * 3.6).toFixed(1)} km/h<br/>
+                    {user.isCurrentUser ? '(Это вы)' : '(Отслеживается)'}
+                  </div>
                 </div>
              </Popup>
           </Marker>
 
           {/* Accuracy Circle only for current user */}
-          {user.isCurrentUser && (
+          {user.isCurrentUser && user.position.accuracy < 100 && (
             <Circle 
                 center={[user.position.lat, user.position.lng]} 
-                radius={user.position.accuracy || 20} 
+                radius={user.position.accuracy} 
                 pathOptions={{ fillColor: user.color, fillOpacity: 0.1, stroke: false }} 
             />
           )}
